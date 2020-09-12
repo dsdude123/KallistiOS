@@ -80,7 +80,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <netinet/in.h> /* Consts & structs defined by the internet system */
+#include <winsock2.h> /* Consts & structs defined by the internet system */
 
 /* good old times without autoconf... */
 #if defined(linux) || defined(sun)
@@ -790,6 +790,11 @@ int main(int argc, char *argv[]) {
     struct excludes *pe, *pe2;
     FILE *f;
 
+    static WSADATA wsaData;
+    int wsaerr = WSAStartup(MAKEWORD(2, 0), &wsaData);
+    if (wsaerr)
+        exit(1);
+
     while((c = getopt(argc, argv, "V:vd:f:ha:A:x:")) != EOF) {
         switch(c) {
             case 'd':
@@ -806,12 +811,14 @@ int main(int argc, char *argv[]) {
                 break;
             case 'h':
                 showhelp(argv[0]);
+                WSACleanup();
                 exit(0);
             case 'a':
                 align = strtoul(optarg, NULL, 0);
 
                 if(align < 16 || (align & (align - 1))) {
                     fprintf(stderr, "Align has to be at least 16 bytes and a power of two\n");
+                    WSACleanup();
                     exit(1);
                 }
 
@@ -821,11 +828,13 @@ int main(int argc, char *argv[]) {
 
                 if(i < 16 || (i & (i - 1))) {
                     fprintf(stderr, "Align has to be at least 16 bytes and a power of two\n");
+                    WSACleanup();
                     exit(1);
                 }
 
                 if(*p != ',' || !p[1]) {
                     fprintf(stderr, "-A takes N,PATTERN format of argument, where N is a number\n");
+                    WSACleanup();
                     exit(1);
                 }
 
@@ -861,6 +870,7 @@ int main(int argc, char *argv[]) {
 
                 break;
             default:
+                WSACleanup();
                 exit(1);
         }
     }
@@ -884,6 +894,7 @@ int main(int argc, char *argv[]) {
 
     if(!f) {
         perror(outf);
+        WSACleanup();
         exit(1);
     }
 
@@ -893,6 +904,7 @@ int main(int argc, char *argv[]) {
     lastoff = processdir(1, dir, dir, &sb, root, root, spaceneeded(root));
     if(lastoff < 0) {
         fprintf(stderr, "Error while processing directory.\n");
+        WSACleanup();
         return 1;
     }
 
@@ -901,8 +913,10 @@ int main(int argc, char *argv[]) {
 
     if(dumpall(root, lastoff, f)) {
         fprintf(stderr, "Error while dumping!\n");
+        WSACleanup();
         return 1;
     }
 
+    WSACleanup();
 		return 0;
 }
